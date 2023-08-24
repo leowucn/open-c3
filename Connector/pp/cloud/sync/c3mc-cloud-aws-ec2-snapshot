@@ -1,0 +1,23 @@
+#!/usr/bin/env /data/Software/mydan/python3/bin/python3
+# -*- coding: utf-8 -*-
+
+import sys
+import json
+
+sys.path.append("/data/Software/mydan/Connector/lib/pp")
+from c3mc_cloud_aws_ec2 import LIB_EC2
+
+
+def main(access_id, access_key, region):
+    try:
+        snapshot_list = LIB_EC2(access_id, access_key, region).describe_snapshots()
+        for item in snapshot_list:
+            print(json.dumps(item, default=str))
+
+    except Exception as e:
+        print(f"同步aws ec2 snapshot资源出错. access_id: {access_id}, region: {region}", file=sys.stderr)
+        raise e
+
+
+if __name__ == "__main__":
+    main(sys.argv[1], sys.argv[2], sys.argv[3])

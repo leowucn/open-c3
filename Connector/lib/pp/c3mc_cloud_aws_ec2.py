@@ -8,7 +8,6 @@ import sys
 import boto3
 from botocore.exceptions import ClientError
 
-
 sys.path.append("/data/Software/mydan/Connector/lib/pp")
 from c3mc_utils import safe_run_command
 
@@ -91,15 +90,15 @@ class LIB_EC2:
 
         while True:
             if fail_times > max_tries:
-                raise RuntimeError(f"查询ec2实例信息失败, instance_id: {instance_id}, max_tries: {max_tries}, every_wait_time: {every_wait_time}")
-            
+                raise RuntimeError(
+                    f"查询ec2实例信息失败, instance_id: {instance_id}, max_tries: {max_tries}, every_wait_time: {every_wait_time}")
+
             if not self.describe_instances([instance_id])["Reservations"][0]["Instances"]:
                 fail_times += 1
                 time.sleep(every_wait_time)
                 continue
 
             return self.describe_instances([instance_id])["Reservations"][0]["Instances"][0]
-            
 
     def stop_instances(self, instance_ids):
         """停止ec2实例
@@ -397,7 +396,8 @@ class LIB_EC2:
                 if not self.wait_volume_until_status(volume_id, "available", timeout):
                     raise RuntimeError(
                         f"等待volume处于 available 状态超时, volume_id: {volume_id}, 超时时间: {timeout} 秒")
-                self.client.delete_volume(VolumeId=volume_id)
+                resp = self.client.delete_volume(VolumeId=volume_id)
+                print(f"删除ec2实例的volume, instance_id: {instance_id}, volume_id: {volume_id}, 结果: {json.dumps(resp)}")
 
     def delete_ec2(self, instance_ids):
         """回收ec2。这是一个比较高级的实现, 内部封装了回收ec2关联资源的逻辑
@@ -418,7 +418,7 @@ class LIB_EC2:
                 continue
 
             filtered_instance_ids.append(instance_list[0]["InstanceId"])
-        
+
         if not filtered_instance_ids:
             return
 
@@ -462,7 +462,9 @@ class LIB_EC2:
 
         该版本的接口从c3本地查询数据, 这样查询会很快
         """
-        output = safe_run_command(["c3mc-device-data-get", "curr", "compute", "aws-ec2", "account", "区域", "实例ID", "内网IP", "Architecture", "实例类型"])
+        output = safe_run_command(
+            ["c3mc-device-data-get", "curr", "compute", "aws-ec2", "account", "区域", "实例ID", "内网IP",
+             "Architecture", "实例类型"])
 
         data = []
         for line in output.split("\n"):
@@ -486,3 +488,26 @@ class LIB_EC2:
             })
 
         return sorted(data, key=lambda x: (x['InstanceId'].lower()), reverse=False)
+
+    def describe_snapshots(self):
+        """
+        查询快照列表
+        """
+        snapshot_list = []
+        next_token = None
+
+        while True:
+            if next_token:
+                response = self.client.describe_snapshots(NextToken=next_token, MaxResults=1000)
+            else:
+                response = self.client.describe_snapshots(MaxResults=1000)
+
+            snapshot_list.extend(response['Snapshots'])
+
+            # 检查是否有更多分页
+            if 'NextToken' in response:
+                next_token = response['NextToken']
+            else:
+                break
+
+        return snapshot_list
