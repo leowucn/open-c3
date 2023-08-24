@@ -1,8 +1,6 @@
 #!/usr/bin/env /data/Software/mydan/python3/bin/python3
 # -*- coding: utf-8 -*-
 
-import json
-
 import boto3
 
 
@@ -99,4 +97,38 @@ class Elasticache:
         return self.client.remove_tags_from_resource(
             ResourceName=arn,
             TagKeys=need_delete_list
+        )
+    
+    def ddelete_replication_group(self, replication_group_id, final_snapshot_identifier=""):
+        """删除复制组
+
+        Args:
+            replication_group_id (str): 复制组id
+            final_snapshot_identifier (str): 最终快照标识符。如果不想要创建快照，请不要传递该参数
+        """
+        params = {
+            "ReplicationGroupId": replication_group_id
+        }
+        if final_snapshot_identifier:
+            params["FinalSnapshotIdentifier"] = final_snapshot_identifier
+
+        return self.client.delete_replication_group(
+            **params
+        )
+
+    def delete_cache_cluster(self, cache_cluster_id, final_snapshot_identifier=""):
+        """删除缓存集群
+
+        Args:
+            cache_cluster_id (str): 缓存集群id
+            final_snapshot_identifier (str): 最终快照标识符。如果不想要创建快照，请不要传递该参数
+        """
+        params = {
+            "CacheClusterId": cache_cluster_id
+        }
+        if final_snapshot_identifier:
+            params["FinalSnapshotIdentifier"] = final_snapshot_identifier
+
+        return self.client.delete_cache_cluster(
+            **params
         )
