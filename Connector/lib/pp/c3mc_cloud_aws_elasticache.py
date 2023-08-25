@@ -1,7 +1,11 @@
 #!/usr/bin/env /data/Software/mydan/python3/bin/python3
 # -*- coding: utf-8 -*-
+import sys
 
 import boto3
+
+sys.path.append("/data/Software/mydan/Connector/lib/pp")
+from c3mc_utils import safe_run_command
 
 
 class Elasticache:
@@ -132,3 +136,35 @@ class Elasticache:
         return self.client.delete_cache_cluster(
             **params
         )
+        # subtype: aws-memcached
+    
+    def get_local_cluster_list_v1(self, account, region):
+        """根据账号和区域查询elasticache列表
+
+        该版本的接口从c3本地查询数据, 这样查询会很快
+        """
+        output = safe_run_command([
+            "c3mc-device-data-get", "curr", "database", "aws-rds-cluster", "account", "区域", "名称", "状态", "实例ID"
+        ])
+
+        data = []
+        for line in output.split("\n"):
+            line = line.strip()
+            if line == "":
+                continue
+
+            parts = line.split()
+
+            if len(parts) != 5:
+                continue
+
+            if parts[0] != account or parts[1] != region:
+                continue
+
+            data.append({
+                "Name": parts[2],
+                "Status": parts[3],
+                "Arn": parts[4],
+            })
+
+        return sorted(data, key=lambda x: (x['Name'].lower()), reverse=False)
